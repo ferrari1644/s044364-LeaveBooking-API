@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS staff(
     full_name VARCHAR(128) NOT NULL,
     department VARCHAR(64),
     manager_id VARCHAR(64),
-    annual_leave_allocation INT NOT NULL
+    annual_leave_allocation INT NOT NULL,
+    leave_remaining INT NOT NULL
     );
 
 CREATE TABLE IF NOT EXISTS leave_request(
