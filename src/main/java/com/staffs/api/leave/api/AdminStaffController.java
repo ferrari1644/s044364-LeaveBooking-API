@@ -16,6 +16,9 @@ public class AdminStaffController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public StaffJpa add(@RequestBody StaffJpa staff) {
+        if (staff.getLeaveRemaining() == null && staff.getAnnualLeaveAllocation() != null) {
+            staff.setLeaveRemaining(staff.getAnnualLeaveAllocation());
+        }
         return staffRepo.save(staff);
     }
 
@@ -24,7 +27,24 @@ public class AdminStaffController {
     public StaffJpa update(@PathVariable String id, @RequestBody StaffJpa incoming) {
         var existing = staffRepo.findById(id).orElseThrow();
         if (incoming.getDepartment() != null) existing.setDepartment(incoming.getDepartment());
-        if (incoming.getAnnualLeaveAllocation() > 0) existing.setAnnualLeaveAllocation(incoming.getAnnualLeaveAllocation());
+        Integer incomingAllocation = incoming.getAnnualLeaveAllocation();
+        if (incomingAllocation != null && incomingAllocation > 0) {
+            int used = safe(existing.getAnnualLeaveAllocation()) - safe(existing.getLeaveRemaining());
+            existing.setAnnualLeaveAllocation(incomingAllocation);
+            if (incoming.getLeaveRemaining() == null) {
+                existing.setLeaveRemaining(Math.max(0, incomingAllocation - used));
+            }
+        }
+        if (incoming.getLeaveRemaining() != null) {
+            int allocation = safe(existing.getAnnualLeaveAllocation());
+            int newBalance = Math.max(0, incoming.getLeaveRemaining());
+            if (allocation > 0) {
+                newBalance = Math.min(newBalance, allocation);
+            }
+            existing.setLeaveRemaining(newBalance);
+        }
         return staffRepo.save(existing);
     }
+
+    private int safe(Integer value) { return value == null ? 0 : value; }
 }

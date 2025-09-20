@@ -23,7 +23,7 @@ public class AdminController {
     @PutMapping("/staff/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public StaffJpa amend(@PathVariable String id, @RequestBody AmendStaffRequest req) {
-        return staffAdmin.amend(id, req.department(), req.annualLeaveAllocation());
+        return staffAdmin.amend(id, req.department(), req.annualLeaveAllocation(), req.leaveRemaining());
     }
 
     // 3. View outstanding leave requests filtered by staff, manager’s team, or company

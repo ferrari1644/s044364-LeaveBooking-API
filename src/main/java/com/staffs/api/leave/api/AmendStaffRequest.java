@@ -1,4 +1,4 @@
 package com.staffs.api.leave.api;
 
-record AmendStaffRequest(String department, Integer annualLeaveAllocation) {
+record AmendStaffRequest(String department, Integer annualLeaveAllocation, Integer leaveRemaining) {
 }

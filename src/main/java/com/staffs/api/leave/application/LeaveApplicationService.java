@@ -26,8 +26,12 @@ public class LeaveApplicationService {
     // STAFF ACTION 2: Cancel a request (approved or otherwise)
     public void cancel(String requestId) {
         var r = leaveRepo.findById(requestId).orElseThrow(() -> new RuntimeException("Leave request not found"));
+        var previousStatus = r.getStatus();
         r.setStatus(LeaveStatus.CANCELLED);
         leaveRepo.save(r);
+        if (previousStatus == LeaveStatus.APPROVED) {
+            refreshRemainingBalance(r.getStaffId());
+        }
     }
 
     // STAFF ACTION 3: View my requests + status
@@ -38,12 +42,9 @@ public class LeaveApplicationService {
     // STAFF ACTION 4: Remaining days in current business year
     public int remainingDays(String staffId, LocalDate today) {
         var staff = staffRepo.findById(staffId).orElseThrow(() -> new RuntimeException("Staff not found"));
-        LocalDate ys = BusinessYear.start(today), ye = BusinessYear.end(today);
-        // sum APPROVED within the business year
-        var approved = leaveRepo.findByStaffIdAndStatusAndStartDateGreaterThanEqualAndEndDateLessThanEqual(
-                staffId, LeaveStatus.APPROVED, ys, ye);
-        int used = approved.stream().mapToInt(l -> daysInclusive(l.getStartDate(), l.getEndDate())).sum();
-        return staff.getAnnualLeaveAllocation() - used;
+        int remaining = calculateRemainingDays(staff, today);
+        updateStoredBalanceIfNeeded(staff, remaining);
+        return remaining;
     }
 
     // MANAGER ACTION 1: View outstanding requests (team) with optional date filter
@@ -57,13 +58,20 @@ public class LeaveApplicationService {
     // MANAGER ACTION 2 & 3: Approve/Reject
     public void approve(String requestId) {
         var r = leaveRepo.findById(requestId).orElseThrow();
-        r.setStatus(LeaveStatus.APPROVED);
-        leaveRepo.save(r);
+        if (r.getStatus() != LeaveStatus.APPROVED) {
+            r.setStatus(LeaveStatus.APPROVED);
+            leaveRepo.save(r);
+            refreshRemainingBalance(r.getStaffId());
+        }
     }
     public void reject(String requestId) {
         var r = leaveRepo.findById(requestId).orElseThrow();
+        var previousStatus = r.getStatus();
         r.setStatus(LeaveStatus.REJECTED);
         leaveRepo.save(r);
+        if (previousStatus == LeaveStatus.APPROVED) {
+            refreshRemainingBalance(r.getStaffId());
+        }
     }
 
     // MANAGER ACTION 4: View staff member remaining
@@ -99,6 +107,28 @@ public class LeaveApplicationService {
                 .startDate(r.getStartDate()).endDate(r.getEndDate())
                 .status(r.getStatus()).createdAt(r.getCreatedAt())
                 .build();
+    }
+
+    private int calculateRemainingDays(StaffJpa staff, LocalDate today) {
+        LocalDate ys = BusinessYear.start(today), ye = BusinessYear.end(today);
+        var approved = leaveRepo.findByStaffIdAndStatusAndStartDateGreaterThanEqualAndEndDateLessThanEqual(
+                staff.getId(), LeaveStatus.APPROVED, ys, ye);
+        int used = approved.stream().mapToInt(l -> daysInclusive(l.getStartDate(), l.getEndDate())).sum();
+        int allocation = Optional.ofNullable(staff.getAnnualLeaveAllocation()).orElse(0);
+        return Math.max(0, allocation - used);
+    }
+
+    private void refreshRemainingBalance(String staffId) {
+        var staff = staffRepo.findById(staffId).orElseThrow(() -> new RuntimeException("Staff not found"));
+        int remaining = calculateRemainingDays(staff, LocalDate.now());
+        updateStoredBalanceIfNeeded(staff, remaining);
+    }
+
+    private void updateStoredBalanceIfNeeded(StaffJpa staff, int remaining) {
+        if (!Objects.equals(staff.getLeaveRemaining(), remaining)) {
+            staff.setLeaveRemaining(remaining);
+            staffRepo.save(staff);
+        }
     }
 }
 
