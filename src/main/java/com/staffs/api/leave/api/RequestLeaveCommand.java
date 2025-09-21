@@ -4,5 +4,5 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
-record RequestLeaveCommand(@NotNull LocalDate startDate, @NotNull LocalDate endDate) {
+public record RequestLeaveCommand(@NotNull LocalDate startDate, @NotNull LocalDate endDate) {
 }

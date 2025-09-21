@@ -1,0 +1,40 @@
+@startuml
+title Leave Booking System - Entity Relationship Diagram
+skinparam shadowing false
+skinparam linetype ortho
+skinparam classFontSize 13
+
+entity "app_user" as app_user {
+  * id : VARCHAR(64)
+  --
+  email : VARCHAR(128)
+  password_hash : VARCHAR(255)
+  role : VARCHAR(16)
+  department : VARCHAR(64)
+  manager_id : VARCHAR(64)
+}
+
+entity "staff" as staff {
+  * id : VARCHAR(64)
+  --
+  full_name : VARCHAR(128)
+  department : VARCHAR(64)
+  manager_id : VARCHAR(64)
+  annual_leave_allocation : INT
+  leave_remaining : INT
+}
+
+entity "leave_request" as leave_request {
+  * id : VARCHAR(64)
+  --
+  staff_id : VARCHAR(64)
+  start_date : DATE
+  end_date : DATE
+  status : VARCHAR(16)
+  created_at : DATE
+}
+
+staff ||--o{ leave_request : "requests"
+staff }o--|| staff : "manager"
+app_user ||--|| staff : "shares id/email"
+@enduml

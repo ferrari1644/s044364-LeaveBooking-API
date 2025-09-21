@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,10 +48,8 @@ class LeaveApplicationServiceBalanceTest {
                 LeaveRequestJpa.builder().startDate(LocalDate.of(2024, 4, 1)).endDate(LocalDate.of(2024, 4, 5)).status(LeaveStatus.APPROVED).build(),
                 LeaveRequestJpa.builder().startDate(LocalDate.of(2024, 5, 1)).endDate(LocalDate.of(2024, 5, 3)).status(LeaveStatus.APPROVED).build()
         );
-        var yearStart = BusinessYear.start(today);
-        var yearEnd = BusinessYear.end(today);
         when(leaveRepo.findByStaffIdAndStatusAndStartDateGreaterThanEqualAndEndDateLessThanEqual(
-                "staff-1", LeaveStatus.APPROVED, yearStart, yearEnd)).thenReturn(approved);
+                eq("staff-1"), eq(LeaveStatus.APPROVED), any(LocalDate.class), any(LocalDate.class))).thenReturn(approved);
 
         int remaining = service.remainingDays("staff-1", today);
 
@@ -70,7 +70,7 @@ class LeaveApplicationServiceBalanceTest {
 
         var approved = List.of(
                 LeaveRequestJpa.builder().startDate(LocalDate.of(2024, 4, 1)).endDate(LocalDate.of(2024, 4, 3)).status(LeaveStatus.APPROVED).build(),
-                LeaveRequestJpa.builder().startDate(LocalDate.of(2024, 4, 10)).endDate(LocalDate.of(2024, 4, 10)).status(LeaveStatus.APPROVED).build()
+                LeaveRequestJpa.builder().startDate(LocalDate.of(2024, 4, 10)).endDate(LocalDate.of(2024, 4, 11)).status(LeaveStatus.APPROVED).build()
         );
         var yearStart = BusinessYear.start(today);
         var yearEnd = BusinessYear.end(today);

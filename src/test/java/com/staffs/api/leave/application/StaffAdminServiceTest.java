@@ -2,10 +2,9 @@ package com.staffs.api.leave.application;
 
 import com.staffs.api.leave.infrastructure.StaffJpa;
 import com.staffs.api.leave.infrastructure.StaffRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,48 +18,58 @@ class StaffAdminServiceTest {
 
     @Mock
     private StaffRepository staffRepo;
-    @InjectMocks
     private StaffAdminService service;
 
-    @Test
-    void add_setsRemainingToAllocationWhenMissing() {
-        var staff = StaffJpa.builder()
-                .id("staff-1")
-                .fullName("Test User")
-                .annualLeaveAllocation(22)
-                .leaveRemaining(null)
-                .build();
-
-        when(staffRepo.save(any(StaffJpa.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        var saved = service.add(staff);
-
-        ArgumentCaptor<StaffJpa> captor = ArgumentCaptor.forClass(StaffJpa.class);
-        verify(staffRepo).save(captor.capture());
-        assertThat(captor.getValue().getLeaveRemaining()).isEqualTo(22);
-        assertThat(saved.getLeaveRemaining()).isEqualTo(22);
+    @BeforeEach
+    void setUp() {
+        service = new StaffAdminService(staffRepo);
     }
 
     @Test
-    void amend_updatesAllocationAndRecomputesRemainingWhenNotProvided() {
-        var existing = StaffJpa.builder()
-                .id("staff-1")
-                .fullName("Test User")
-                .department("Sales")
-                .annualLeaveAllocation(20)
-                .leaveRemaining(5)
+    void add_initialisesLeaveBalanceWhenMissing() {
+        var staff = StaffJpa.builder()
+                .id("new@corp")
+                .annualLeaveAllocation(22)
+                .leaveRemaining(null)
                 .build();
-        when(staffRepo.findById("staff-1")).thenReturn(Optional.of(existing));
-        when(staffRepo.save(any(StaffJpa.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        service.add(staff);
+        verify(staffRepo).save(staff);
+        assertThat(staff.getLeaveRemaining()).isEqualTo(22);
+    }
 
-        var amended = service.amend("staff-1", "Marketing", 25, null);
+    @Test
+    void amend_updatesDepartmentAndRecalculatesBalanceFromAllocation() {
+        var existing = StaffJpa.builder()
+                .id("existing@corp")
+                .department("Old")
+                .annualLeaveAllocation(20)
+                .leaveRemaining(15)
+                .build();
+        when(staffRepo.findById("existing@corp")).thenReturn(Optional.of(existing));
 
-        ArgumentCaptor<StaffJpa> captor = ArgumentCaptor.forClass(StaffJpa.class);
-        verify(staffRepo).save(captor.capture());
-        StaffJpa saved = captor.getValue();
-        assertThat(saved.getDepartment()).isEqualTo("Marketing");
-        assertThat(saved.getAnnualLeaveAllocation()).isEqualTo(25);
-        assertThat(saved.getLeaveRemaining()).isEqualTo(10);
-        assertThat(amended.getLeaveRemaining()).isEqualTo(10);
+        var updated = StaffJpa.builder().build();
+        when(staffRepo.save(existing)).thenReturn(updated);
+
+        var result = service.amend("existing@corp", "Engineering", 25, null);
+
+        assertThat(existing.getDepartment()).isEqualTo("Engineering");
+        assertThat(existing.getAnnualLeaveAllocation()).isEqualTo(25);
+        assertThat(existing.getLeaveRemaining()).isEqualTo(20);
+        assertThat(result).isEqualTo(updated);
+    }
+
+    @Test
+    void amend_respectsProvidedLeaveRemainingBounds() {
+        var existing = StaffJpa.builder()
+                .id("bounded@corp")
+                .annualLeaveAllocation(18)
+                .leaveRemaining(10)
+                .build();
+        when(staffRepo.findById("bounded@corp")).thenReturn(Optional.of(existing));
+
+        service.amend("bounded@corp", null, null, 50);
+
+        assertThat(existing.getLeaveRemaining()).isEqualTo(18);
+        verify(staffRepo).save(existing);
     }
 }

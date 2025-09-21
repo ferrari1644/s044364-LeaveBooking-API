@@ -1,0 +1,22 @@
+@startuml
+title Sequence - JWT Login Flow
+skinparam shadowing false
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+
+actor User
+participant "IdentityController" as Controller
+participant "UserService" as Service
+database "AppUserRepository" as Repo
+participant "JwtTokenUtil" as Jwt
+
+User -> Controller : POST /api/auth/login (email, password)
+Controller -> Service : login(email, password)
+Service -> Repo : findByEmail(email)
+Repo --> Service : AppUserJpa
+Service -> Service : BCrypt.checkpw(...)
+Service -> Jwt : generate(email, role)
+Jwt --> Service : jwtToken
+Service --> Controller : jwtToken
+Controller --> User : LoginResponse(token)
+@enduml

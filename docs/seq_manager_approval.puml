@@ -1,0 +1,22 @@
+@startuml
+title Sequence - Manager Approval
+skinparam shadowing false
+skinparam sequenceArrowThickness 1
+
+actor Manager
+participant "ManagerController" as Mc
+participant "LeaveApplicationService" as Las
+database "LeaveRequestRepository" as LRepo
+database "StaffRepository" as SRepo
+
+Manager -> Mc : PUT /api/manager/leaves/{id}/approve
+Mc -> Las : approve(requestId)
+Las -> LRepo : findById(requestId)
+LRepo --> Las : LeaveRequestJpa
+Las -> LRepo : save(updated request)
+Las -> SRepo : findById(staffId)
+SRepo --> Las : StaffJpa
+Las -> SRepo : save(updated staff balance)
+Las --> Mc : void
+Mc --> Manager : 204 No Content
+@enduml

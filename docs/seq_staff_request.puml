@@ -1,0 +1,20 @@
+@startuml
+title Sequence - Staff Leave Request
+skinparam shadowing false
+skinparam sequenceArrowThickness 1
+
+actor Staff
+participant "LeaveController" as Lc
+participant "LeaveApplicationService" as Las
+database "StaffRepository" as SRepo
+database "LeaveRequestRepository" as LRepo
+
+Staff -> Lc : POST /api/leaves/request (start, end)
+Lc -> Las : requestLeave(staffId, start, end)
+Las -> SRepo : findById(staffId)
+SRepo --> Las : StaffJpa
+Las -> Las : createPending()
+Las -> LRepo : save(LeaveRequestJpa)
+Las --> Lc : LeaveRequest
+Lc --> Staff : LeaveResponse
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+title Leave Booking System - Class Diagram
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam packageTitleFontSize 16
+skinparam classFontSize 13
+
+package "Identity" {
+  class IdentityController {
+    +login(req: LoginRequest): LoginResponse
+  }
+  class UserService {
+    +login(email, password): String
+  }
+  interface AppUserRepository
+  class AppUserJpa
+  class JwtTokenUtil
+}
+
+package "Leave Management" {
+  class LeaveController
+  class ManagerController
+  class AdminController
+  class AnalyticsController
+  class LeaveApplicationService
+  class StaffAdminService
+  interface LeaveRequestRepository
+  interface StaffRepository
+  class LeaveRequestJpa
+  class StaffJpa
+  class BusinessYear
+}
+
+package "Security & Cross-cutting" {
+  class SecurityConfig
+  class JwtAuthenticationFilter
+  class RateLimitingFilter
+  class HeaderObfuscationFilter
+  class SecurityHandlers
+}
+
+IdentityController --> UserService
+UserService --> AppUserRepository
+AppUserRepository --> AppUserJpa
+UserService --> JwtTokenUtil
+
+LeaveController --> LeaveApplicationService
+ManagerController --> LeaveApplicationService
+AdminController --> LeaveApplicationService
+AdminController --> StaffAdminService
+AnalyticsController --> LeaveRequestRepository
+AnalyticsController --> StaffRepository
+StaffAdminService --> StaffRepository
+LeaveApplicationService --> LeaveRequestRepository
+LeaveApplicationService --> StaffRepository
+LeaveApplicationService --> BusinessYear
+LeaveRequestRepository --> LeaveRequestJpa
+StaffRepository --> StaffJpa
+
+SecurityConfig --> JwtAuthenticationFilter
+SecurityConfig --> RateLimitingFilter
+SecurityConfig --> HeaderObfuscationFilter
+SecurityConfig --> SecurityHandlers
+JwtAuthenticationFilter --> JwtTokenUtil
+RateLimitingFilter --> "RateLimiterService"
+@enduml
